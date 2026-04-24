@@ -97,7 +97,7 @@ function check_mal(int $idx, MorphemeList $ml): bool {
 		$e = $ml->get($n);
 		if ($e) {
 			$pos = $e->part_of_speech;
-			if ($pos === POS::Verb || $pos === POS::SubstantiveVerb || $pos === POS::Adjective) return true;
+			if ($pos === POS::Verb || $pos === POS::SubstantiveVerb || $pos === POS::Adjective || $pos === POS::Adverb) return true;
 		}
 	}
 	return false;
@@ -356,13 +356,23 @@ function check_limited_synthesis(string $morpheme, int $idx, MorphemeList $ml): 
 	} elseif (is_animal($meaning)) {
 		if ($idx > 0) {
 			$prev = $ml->get($idx - 1);
-			if ($prev && $prev->morpheme !== 'vir') return false;
+			if ($prev && $prev->synthesis !== Synthesis::Prefix) return false;
 		}
 		if ($idx < $last) {
 			$next = $ml->get($idx + 1);
 			if ($next) {
 				$m = $next->morpheme;
-				if ($m !== 'in' && $m !== 'id' && $m !== 'aĵ' && $m !== 'ov') return false;
+				// Permetti composti liberi se l'animale è preceduto solo da prefissi
+				// (es. kat-am-ant-o, ge-kat-am-ant-o-j)
+				$only_prefixes_before = true;
+				for ($n = 0; $n < $idx; $n++) {
+					$e = $ml->get($n);
+					if ($e && $e->synthesis !== Synthesis::Prefix) {
+						$only_prefixes_before = false;
+						break;
+					}
+				}
+				if (!$only_prefixes_before && $m !== 'in' && $m !== 'id' && $m !== 'aĵ' && $m !== 'ov') return false;
 			}
 		}
 	} elseif ($meaning === Meaning::ETNO) {
