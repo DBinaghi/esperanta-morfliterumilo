@@ -1,7 +1,8 @@
 <?php
-	require_once 'literumilo\literumilo.php';
+	require_once 'literumilo/literumilo.php';
 
 	$testo_da_analizzare = $_POST['parola'] ?? "";
+	$versio = "2.3";
 
 	/**
 	 * Trasforma la struttura dati (array/json) in output HTML.
@@ -32,10 +33,24 @@
 					$morpheme = htmlspecialchars($m['morpheme']);
 					$type = htmlspecialchars($m['type']);
 					$pos = mb_strtolower(htmlspecialchars($m['pos']));
-					if ($type == 'radiko') {
-						$output .= "<div class=\"morfemo {$type}\" title=\"{$type}\">{$morpheme}<div class=\"etikedo\">{$pos}</div></div>";
-					} else {
-						$output .= "<div class=\"morfemo {$type}\" title=\"{$pos}\">{$morpheme}<div class=\"etikedo\">{$type}</div></div>";
+					switch ($type) {
+						case 'radiko':
+						case 'preposicio':
+							$output .= "<div class=\"morfemo radiko\">{$morpheme}<div class=\"etikedo\">radiko<br>({$pos})</div></div>";
+							break;
+						case 'finaĵo':
+						case 'akuzativo':
+						case 'pluralo':
+						case 'participo':
+						case 'disigilo':
+							$output .= "<div class=\"morfemo finaĵo\">{$morpheme}<div class=\"etikedo\">finaĵo<br>({$pos})</div></div>";
+							break;
+						case 'prefikso':
+							$output .= "<div class=\"morfemo {$type}\">{$morpheme}<div class=\"etikedo\">{$type}<br>({$pos})</div></div>";
+							break;
+						case 'sufikso':
+							$output .= "<div class=\"morfemo {$type}\">{$morpheme}<div class=\"etikedo\">{$type}<br>({$pos})</div></div>";
+							break;
 					}
 				}
 				$output .= '</div>';
@@ -51,7 +66,7 @@
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>Esperanta vortanalizilo 2.2</title>
+		<title>Esperanta vortanalizilo <?= $versio ?></title>
 		<style>
 			body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 20px auto; padding: 0 15px; color: #333; }
 			.container { background: #f9f9f9; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -97,13 +112,13 @@
 			.morfemo.finaĵo		{ background-color: #fecaca; border-color: #dc2626; color: #7f1d1d; } /* Rosso profondo */
 			.morfemo.disigilo	{ background-color: #cffafe; border-color: #06b6d4; color: #155e75; } /* Ciano-turchese */
 			.morfemo.akuzativo	{ background-color: #ffedd5; border-color: #f97316; color: #9a3412; } /* Arancio tenue */
-			.etikedo			{ display: block; font-size: 0.70em; opacity: 0.7; }
+			.etikedo			{ display: block; margin-top: 5px; font-size: 0.70em; line-height: 1.25em; opacity: 0.65; }
 		</style>
 	</head>
 
 	<body>
 		<div class="container">
-			<h1>Esperanta vortanalizilo 2.2</h1>
+			<h1>Esperanta vortanalizilo <?= $versio ?></h1>
 
 			<form method="POST" action="" class="search-box">
 				<textarea name="parola" placeholder="Enigu tekston (ekz.: Malsanulejon)..."><?php echo htmlspecialchars($testo_da_analizzare) ?></textarea>
