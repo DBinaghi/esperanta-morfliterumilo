@@ -1,14 +1,16 @@
 <?php
 	require_once 'literumilo/literumilo.php';
 
-	$testo_da_analizzare = $_POST['parola'] ?? "";
-	$versio = "2.3";
-
+	$testo_da_analizzare = $_POST['teksto'] ?? "";
+	$versio = "2.6";
+	$limite = $_GET['limo'] ?? '';
+	
 	/**
 	 * Trasforma la struttura dati (array/json) in output HTML.
 	 * PHP puro, senza JavaScript.
 	 */
 	function render_html(array $data): string {
+		global $limite;
 		if (empty($data)) return "";
 
 		$output = '';
@@ -20,42 +22,44 @@
 
 			if (!$item['valid']) {
 				// Parola non riconosciuta
-				$output .= '<div class="risultato invalido">' . htmlspecialchars($item['word']) . '</div>';
+				$output .= '<div class="risultato invalido">';
+				$output .= '<p class="descrizione">' . htmlspecialchars($item['word']) . ' <span class="fail-badge">Ne-analizita</span></p>';
+				$output .= '</div>';
 				continue;
-			}
-
-			// Parola valida: creiamo il contenitore per le soluzioni
-			$output .= '<div class="risultato">';
-			$output .= '<p class="descrizione">' . $item['word'] . '</p>'; 
-			foreach ($item['solutions'] as $sol) {
-				$output .= '<div class="scomposizione">';
-				foreach ($sol as $m) {
-					$morpheme = htmlspecialchars($m['morpheme']);
-					$type = htmlspecialchars($m['type']);
-					$pos = mb_strtolower(htmlspecialchars($m['pos']));
-					switch ($type) {
-						case 'radiko':
-						case 'preposicio':
-							$output .= "<div class=\"morfemo radiko\">{$morpheme}<div class=\"etikedo\">radiko<br>({$pos})</div></div>";
-							break;
-						case 'finaĵo':
-						case 'akuzativo':
-						case 'pluralo':
-						case 'participo':
-						case 'disigilo':
-							$output .= "<div class=\"morfemo finaĵo\">{$morpheme}<div class=\"etikedo\">finaĵo<br>({$pos})</div></div>";
-							break;
-						case 'prefikso':
-							$output .= "<div class=\"morfemo {$type}\">{$morpheme}<div class=\"etikedo\">{$type}<br>({$pos})</div></div>";
-							break;
-						case 'sufikso':
-							$output .= "<div class=\"morfemo {$type}\">{$morpheme}<div class=\"etikedo\">{$type}<br>({$pos})</div></div>";
-							break;
+			} elseif ($limite != 'neanalizitaj') {
+				// Parola valida: creiamo il contenitore per le soluzioni
+				$output .= '<div class="risultato">';
+				$output .= '<p class="descrizione">' . htmlspecialchars($item['word']) . '</p>';
+				foreach ($item['solutions'] as $sol) {
+					$output .= '<div class="scomposizione">';
+					foreach ($sol as $m) {
+						$morpheme = htmlspecialchars($m['morpheme']);
+						$type = htmlspecialchars($m['type']);
+						$pos = mb_strtolower(htmlspecialchars($m['pos']));
+						switch ($type) {
+							case 'radiko':
+							case 'preposicio':
+								$output .= "<div class=\"morfemo radiko\">{$morpheme}<div class=\"etikedo\">radiko<br><span class=\"pos\">{$pos}</span></div></div>";
+								break;
+							case 'finaĵo':
+							case 'akuzativo':
+							case 'pluralo':
+							case 'disigilo':
+							case 'participo':
+								$output .= "<div class=\"morfemo finaĵo\">{$morpheme}<div class=\"etikedo\">finaĵo<br><span class=\"pos\">{$pos}</span></div></div>";
+								break;
+							case 'prefikso':
+								$output .= "<div class=\"morfemo prefikso\">{$morpheme}<div class=\"etikedo\">prefikso<br><span class=\"pos\">{$pos}</span></div></div>";
+								break;
+							case 'sufikso':
+								$output .= "<div class=\"morfemo sufikso\">{$morpheme}<div class=\"etikedo\">sufikso<br><span class=\"pos\">{$pos}</span></div></div>";
+								break;
+						}
 					}
+					$output .= '</div>';
 				}
 				$output .= '</div>';
 			}
-			$output .= '</div>';
 		}
 		return $output;
 	}
@@ -66,92 +70,407 @@
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>Esperanta vortanalizilo <?= $versio ?></title>
+		<title>Vortanalizilo <?= $versio ?> — hVortaro</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 		<style>
-			body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 20px auto; padding: 0 15px; color: #333; }
-			.container { background: #f9f9f9; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-			h1 { color: #2e7d32; }
-
-			/* Stile del Form */
-			.search-box { display: flex; gap: 10px; margin-bottom: 15px; }
-			textarea { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-			button { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
-			button:hover { background-color: #45a049; }
-
-			/* Stile Risultati */
-			.risultato { background: white; padding: 15px; border-left: 5px solid #4CAF50; margin-bottom: 10px; border-radius: 4px; }
-			.invalido { border-left: 5px solid #dc2626; font-style: italic }
-			.scomposizione:not(:last-child) { margin-bottom: 1em; }
-			.esempio-titolo { margin-top: 30px; font-weight: bold; color: #666; border-bottom: 1px solid #ddd; }
-			.footer-info { font-size: 0.8em; color: #777; margin-top: 10px; }
-
-			.descrizione { font-weight:bold; margin-top: 0; margin-bottom: .2em; font-family:sans-serif; }
-			.analizero { font-size:1.2em; font-weight:bold; display:block; margin-bottom: 2px; }
-
-			/* Stile base delle tessere */
-			.morfemo {
-				display: inline-block;
-				vertical-align: top;
-				margin-right: .3em;
-				margin-bottom: .3em;
-				text-align: center;
-				font-weight:bold;
-				font-family: 'Segoe UI', Tahoma, sans-serif;
-				border-width: 1px;
-				border-style: solid;
-				border-radius: 4px;
-				padding: 4px 6px;
-				box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Leggera profondità */
+			:root {
+				--green-dark:  #1a5c2a;
+				--green-mid:   #2d8a45;
+				--green-light: #4ab563;
+				--green-pale:  #e8f5ec;
+				--salmon:      #e87060;
+				--salmon-pale: #fdecea;
+				--bg:          #f7f9f7;
+				--surface:     #ffffff;
+				--border:      #d4e8da;
+				--text:        #1c2e22;
+				--text-mid:    #4a6855;
+				--text-light:  #7a9e88;
+				--radius:      10px;
+				--shadow:      0 2px 12px rgba(30,80,45,0.09);
+			}
+			* { box-sizing: border-box; margin: 0; padding: 0; }
+			body {
+				font-family: 'Source Sans 3', sans-serif;
+				background: var(--bg);
+				color: var(--text);
+				min-height: 100vh;
+				padding: 0 0 60px;
 			}
 
-			.morfemo.prefikso	{ background-color: #fef3c7; border-color: #f59e0b; color: #92400e; } /* Giallo miele */
-			.morfemo.radiko		{ background-color: #dcfce7; border-color: #22c55e; color: #166534; } /* Verde salvia */
-			.morfemo.sufikso	{ background-color: #dbeafe; border-color: #3b82f6; color: #1e40af; } /* Blu pastello */
-			.morfemo.participo	{ background-color: #f3e8ff; border-color: #a855f7; color: #6b21a8; } /* Viola lavanda */
-			.morfemo.pluralo	{ background-color: #fee2e2; border-color: #ef4444; color: #991b1b; } /* Rosso rosa */
-			.morfemo.finaĵo		{ background-color: #fecaca; border-color: #dc2626; color: #7f1d1d; } /* Rosso profondo */
-			.morfemo.disigilo	{ background-color: #cffafe; border-color: #06b6d4; color: #155e75; } /* Ciano-turchese */
-			.morfemo.akuzativo	{ background-color: #ffedd5; border-color: #f97316; color: #9a3412; } /* Arancio tenue */
-			.etikedo			{ display: block; margin-top: 5px; font-size: 0.70em; line-height: 1.25em; opacity: 0.65; }
+			/* ── HEADER ── */
+			header {
+				background: var(--green-dark);
+				color: white;
+				padding: 18px 24px 16px;
+				display: flex;
+				align-items: center;
+				gap: 14px;
+				box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+			}
+			header .logo-mark {
+				width: 38px; height: 38px;
+				background: var(--green-light);
+				border-radius: 8px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-family: 'JetBrains Mono', monospace;
+				font-size: 17px;
+				font-weight: 500;
+				color: white;
+				letter-spacing: -1px;
+				flex-shrink: 0;
+			}
+			header .site-name {
+				font-size: 13px;
+				font-weight: 300;
+				opacity: 0.75;
+				letter-spacing: 0.04em;
+			}
+			header .page-title {
+				font-family: 'Playfair Display', serif;
+				font-size: 22px;
+				color: white;
+				font-weight: 600;
+				line-height: 1.1;
+			}
+			header .version-badge {
+				margin-left: auto;
+				background: rgba(255,255,255,0.15);
+				border: 1px solid rgba(255,255,255,0.25);
+				border-radius: 20px;
+				padding: 3px 10px;
+				font-size: 12px; font-family: 'JetBrains Mono', monospace;
+				color: rgba(255,255,255,0.85);
+				flex-shrink: 0;
+			}
+
+			/* ── LAYOUT ── */
+			.container { 
+				max-width: 780px;
+				margin: 0 auto;
+				padding: 28px 20px 0;
+			}
+
+			/* ── INPUT PANEL ── */
+			.input-panel {
+				background: var(--surface);
+				border: 1.5px solid var(--border);
+				border-radius: var(--radius);
+				box-shadow: var(--shadow);
+				padding: 20px;
+				margin-bottom: 20px;
+			}
+			.search-box { 
+				display: flex;
+				gap: 10px;
+				align-items: stretch;
+				margin-bottom: 0;
+			}
+			textarea {
+				flex: 1;
+				border: 1.5px solid var(--border);
+				border-radius: 8px;
+				padding: 12px 14px;
+				font-family: 'Source Sans 3', sans-serif;
+				font-size: 15px;
+				color: var(--text);
+				resize: none;
+				height: 80px;
+				background: var(--bg);
+				transition: border-color 0.2s, box-shadow 0.2s;
+				line-height: 1.5;
+			}
+			textarea:focus {
+				outline: none;
+				border-color: var(--green-mid);
+				box-shadow: 0 0 0 3px rgba(45,138,69,0.12);
+				background: white;
+			}
+			textarea::placeholder { color: var(--text-light); }
+			button[type="submit"] {
+				background: var(--green-mid);
+				color: white;
+				border: none;
+				border-radius: 8px;
+				padding: 0 22px;
+				font-family: 'Source Sans 3', sans-serif;
+				font-size: 15px;
+				font-weight: 600;
+				cursor: pointer;
+				transition: background 0.18s, transform 0.1s;
+				letter-spacing: 0.02em;
+				white-space: nowrap;
+			}
+			button[type="submit"]:hover { 
+				background: var(--green-dark);
+			}
+			button[type="submit"]:active { 
+				transform: scale(0.97);
+			}
+
+			/* ── NOTA INFO ── */
+			.nota {
+				margin-top: 14px;
+				padding: 10px 14px;
+				background: #eef4fb;
+				border-left: 3px solid #4a7fa0;
+				border-radius: 0 6px 6px 0;
+				font-size: 13px;
+				color: var(--text-mid);
+				line-height: 1.55;
+				display: flex;
+				gap: 10px;
+				align-items: flex-start;
+			}
+			.nota svg { 
+				flex-shrink: 0;
+				margin-top: 1px; 
+			}
+
+			/* ── STATS BAR ── */
+			.resumo {
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				justify-content: center;
+				margin-bottom: 22px;
+				padding: 0 2px;
+				flex-wrap: wrap;
+				text-align: left; /* override vecchio stile */
+			}
+			.stat-chip {
+				display: flex;
+				align-items: center;
+				gap: 6px;
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 20px;
+				padding: 5px 14px 5px 10px;
+				font-size: 13.5px;
+				color: var(--text-mid);
+				box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+			}
+			.stat-chip .dot { 
+				width: 8px;
+				height: 8px;
+				border-radius: 50%;
+				flex-shrink: 0; 
+			}
+			.stat-chip b {
+				font-family: 'JetBrains Mono', monospace;
+				font-size: 14px;
+				font-weight: 500;
+				color: var(--text);
+			}
+			.dot-total { background: #222; }
+			.dot-ok    { background: var(--green-light); }
+			.dot-fail  { background: var(--salmon); }
+
+			/* ── SECTION TITLE ── */
+			.esempio-titolo {
+				font-family: 'Playfair Display', serif;
+				font-size: 18px;
+				font-weight: 600;
+				color: var(--text);
+				margin-bottom: 14px;
+				padding-bottom: 8px;
+				border-bottom: 2px solid var(--border);
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+			
+			/* ── WORD BLOCK ── */
+			.risultato {
+				background: var(--surface);
+				border: 1.5px solid var(--border);
+				border-left: 4px solid var(--green-mid);
+				border-radius: var(--radius);
+				padding: 16px 18px; margin-bottom: 12px;
+				box-shadow: var(--shadow);
+			}
+			.risultato.invalido {
+				border-left-color: var(--salmon);
+				background: var(--salmon-pale);
+			}
+			.risultato.invalido .descrizione { color: var(--salmon); }
+
+			.descrizione {
+				font-family: 'JetBrains Mono', monospace;
+				font-size: 16px;
+				font-weight: 500;
+				color: black;
+				margin-bottom: 12px;
+				letter-spacing: 0.01em;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+			.fail-badge {
+				font-family: 'Source Sans 3', sans-serif;
+				font-size: 11px;
+				font-weight: 600;
+				text-transform: uppercase;
+				letter-spacing: 0.06em;
+				background: var(--salmon);
+				color: white;
+				border-radius: 4px;
+				padding: 1px 7px;
+			}
+
+			/* ── MORFEMOJ ── */
+			.scomposizione { 
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px; 
+			}
+			.scomposizione:not(:last-child) { margin-bottom: 10px; }
+
+			.morfemo {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				border-radius: 8px;
+				padding: 10px 16px 8px;
+				min-width: 64px;
+				text-align: center;
+				border: 1.5px solid transparent;
+				transition: transform 0.15s, box-shadow 0.15s;
+				cursor: default;
+				font-family: 'JetBrains Mono', monospace;
+				font-size: 15px;
+				font-weight: 500;
+				color: var(--text);
+			}
+			.morfemo:hover { 
+				transform: translateY(-2px);
+				box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+			}
+
+			.morfemo.radiko    { background: #e6f4ea; border-color: #9dd4ac; }
+			.morfemo.prefikso  { background: #e8f2f8; border-color: #93c0d8; }
+			.morfemo.sufikso   { background: #fdf3e3; border-color: #e8c07a; }
+			.morfemo.finaĵo    { background: #fdecea; border-color: #f4a89d; }
+			.morfemo.participo { background: #f3e8ff; border-color: #c084fc; }
+			.morfemo.pluralo   { background: #fdecea; border-color: #f4a89d; }
+			.morfemo.akuzativo { background: #ffedd5; border-color: #fdba74; }
+			.morfemo.disigilo  { background: #cffafe; border-color: #67e8f9; }
+
+			.etikedo {
+				display: block;
+				margin-top: 6px;
+				font-family: 'Source Sans 3', sans-serif;
+				font-size: 11.5px;
+				font-weight: 600;
+				text-transform: capitalize;
+				letter-spacing: 0.02em;
+				color: var(--text-mid);
+				line-height: 1;
+			}
+			.etikedo .pos {
+				display: block;
+				font-style: italic;
+				font-size: 10px;
+				color: var(--text-light);
+				margin-top: 2px;
+				font-weight: 400;
+			}
+
+			/* ── LINK BACK ── */
+			.back-link { 
+				margin-top: 16px;
+				font-size: 14px; 
+			}
+			.back-link a { 
+				color: var(--green-mid);
+				text-decoration: none; 
+			}
+			.back-link a:hover { text-decoration: underline; }
 		</style>
 	</head>
 
 	<body>
-		<div class="container">
-			<h1>Esperanta vortanalizilo <?= $versio ?></h1>
+		<header>
+			<div class="logo-mark">hV</div>
+			<div>
+				<div class="site-name">hVortaro</div>
+				<div class="page-title">Vortanalizilo</div>
+			</div>
+			<div class="version-badge">v<?= $versio ?></div>
+		</header>
 
-			<form method="POST" action="" class="search-box">
-				<textarea name="parola" placeholder="Enigu tekston (ekz.: Malsanulejon)..."><?php echo htmlspecialchars($testo_da_analizzare) ?></textarea>
-				<button type="submit">Analizi</button>
-			</form>
+		<div class="container">
+
+			<div class="input-panel">
+				<form method="POST" action="" class="search-box">
+					<textarea name="teksto" placeholder="Enigu tekston (ekz.: Malsanulejon)..." onkeydown="if(event.keyCode == 13 && !event.shiftKey) { event.preventDefault(); this.form.submit(); }"><?php echo trim(htmlspecialchars($testo_da_analizzare)) ?></textarea>
+					<button type="submit">Analizi</button>
+				</form>
+
+				<?php if (empty($_POST['teksto'])): ?>
+				<div class="nota">
+					<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<circle cx="10" cy="10" r="10" fill="#4a7fa0"/>
+						<text x="10" y="15" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="white">i</text>
+					</svg>
+					<span>Ĉi vortanalizilo estas provo krei ilon por rekoni la diversajn partojn de vortoj en Esperanto; ĝi uzas parton de la "<a href="https://github.com/Indrikoterio/literumilo-python" target="_blank">literumilo</a>" kreita de Klivo Lendon, sed daŭre ne estas 100% preciza, do ĉiam kontrolu ĝiajn respondojn se ili ne konvinkas vin. Korajn dankojn al Andrea Vaccari, Carlo Minnaja kaj Norberto Saletti pro iliaj konsiloj kaj sugestoj.</span>
+				</div>
+				<?php endif; ?>
+			</div>
 
 			<div class="content">
-				<?php 
-					if (!empty($testo_da_analizzare)) {
-						// 1. Generiamo i dati (backend logic)
-						$analisi_array = literumilo_get_analysis_array($testo_da_analizzare);
-
-						// 2. Renderizziamo l'HTML (frontend logic in PHP)
-						echo render_html($analisi_array);
-
-						echo '<p><a href="">← Montri ekzemplojn</a></p>';
-					} else {
+				<?php
+					if (empty($testo_da_analizzare)) {
+						$isEsempio = true;
 						$testo_da_analizzare = 'ek fidi Bonvolu malplej belegaj ĉiulandanojn ŝian malreskribita ĉirkaŭdiri ĉimomente kongresaliĝilo krokodilo paperaro';
-
-						echo '<div class="footer-info">
-								Bonvolu atenti: ĉi vortanalizilo estas (serioza) provo krei ilon por rekoni la diversajn partojn de vortoj en Esperanto; 
-								ĝi uzas la "literumilo" kodon kreita de Klivo Lendon, sed daŭre ne estas 100% preciza, do ĉiam kontrolu ĝiajn respondojn se ili ne konvinkas vin kaj, eble, sendu viajn 
-								komentojn al la programisto, sed NE plendu: vivo estas tro mallonga por ĝin pasigi plendante...
-							</div>';
-
-						echo '<div class="esempio-titolo">Ekzemploj:</div>';
-
-						// 1. Generiamo i dati (backend logic)
-						$analisi_array = literumilo_get_analysis_array($testo_da_analizzare);
-
-						// 2. Renderizziamo l'HTML (frontend logic in PHP)
-						echo render_html($analisi_array);
+					} else {
+						$isEsempio = false;
 					}
+
+					// 1. Generiamo i dati (backend logic)
+					$analisi_array = literumilo_get_analysis_array($testo_da_analizzare);
+					
+					// 1b. Log delle ricerche (solo se input utente, non esempio)
+					if (!$isEsempio) {
+						$log_file = __DIR__ . '/vortanalizilo.log';
+						$timestamp = date('Y-m-d H:i:s');
+						foreach ($analisi_array as $item) {
+							if (!empty($item['is_punctuation']) && $item['is_punctuation']) continue;
+							$analizita = $item['valid'] ? 'jes' : 'ne';
+							$vorto = $item['word'];
+							$log_linio = implode("\t", [$timestamp, $versio, $vorto, $analizita]) . PHP_EOL;
+							file_put_contents($log_file, $log_linio, FILE_APPEND | LOCK_EX);
+						}
+					}
+
+					// 2. Calcoliamo il riassunto (escludendo la punteggiatura)
+					$vortoj = 0;
+					$analizitaj = 0;
+					$ne_analizitaj = 0;
+					foreach ($analisi_array as $item) {
+						if (!empty($item['is_punctuation']) && $item['is_punctuation']) continue;
+						$vortoj++;
+						if ($item['valid']) $analizitaj++;
+						else $ne_analizitaj++;
+					}
+
+					// Stats bar con chip
+					echo '<div class="resumo">';
+					echo '<div class="stat-chip"><span class="dot dot-total"></span>Vortoj: <b>' . $vortoj . '</b></div>';
+					echo '<div class="stat-chip"><span class="dot dot-ok"></span>Analizitaj: <b>' . $analizitaj . '</b></div>';
+					echo '<div class="stat-chip"><span class="dot dot-fail"></span>Ne-analizitaj: <b>' . $ne_analizitaj . '</b></div>';
+					echo '</div>';
+
+					if ($isEsempio && ($limite != 'neanalizitaj' || $ne_analizitaj > 0))
+						echo '<div class="esempio-titolo">Ekzemploj</div>';
+					
+					// 3. Renderizziamo l'HTML (frontend logic in PHP)
+					echo render_html($analisi_array);
+
+					if (!$isEsempio) echo '<p class="back-link"><a href="">← Montri ekzemplojn</a></p>';
 				?>
 			</div>
 		</div>
