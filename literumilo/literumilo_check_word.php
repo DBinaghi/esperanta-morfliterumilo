@@ -277,11 +277,13 @@
 			'on','op','uj','ul','um'
 		];
 
-		foreach (explode('.', $morpheme) as $part) {
+		$parts = explode('.', $morpheme);
+		$has_multiple = count($parts) > 1;
+		foreach ($parts as $part) {
 			$low = mb_strtolower($part);
-			if (in_array($low, $prefixes, true)) {
+			if ($has_multiple && in_array($low, $prefixes, true)) {
 				$type = 'prefikso';
-			} elseif (in_array($low, $suffixes, true)) {
+			} elseif ($has_multiple && in_array($low, $suffixes, true)) {
 				$type = 'sufikso';
 			} else {
 				$type = $dubious ? $defaultType . '?' : $defaultType;
@@ -294,6 +296,46 @@
 		$result = [];
 		$parts  = explode('.', $e->morpheme);
 		$last   = count($parts) - 1;
+
+		// Entry precompilate (flag K): tutte le parti sono morfemi lessicali
+		if ($e->flag === 'K') {
+			foreach ($parts as $part) {
+				$sub = $dictionary[mb_strtolower($part)] ?? null;
+				$sub_syn = $sub ? $sub->synthesis : Synthesis::UnLimited;
+				$sub_pos = $sub ? $sub->part_of_speech : $e->part_of_speech;
+				if ($sub_syn === Synthesis::Prefix) {
+					$sub_pos_val = $sub ? $sub->part_of_speech : $e->part_of_speech;
+					if ($sub_pos_val === POS::Prefix) {
+						$type = 'prefikso';
+					} elseif ($sub_pos_val === POS::Preposition) {
+						$type = 'preposicio';
+					} else {
+						$type = 'radiko';
+					}
+				} elseif ($sub_syn === Synthesis::Suffix) {
+					$type = 'sufikso';
+				} else {
+					$type = 'radiko';
+				}
+				$result[] = [
+					'morpheme' => $part,
+					'pos'      => pos_label($sub_pos),
+					'type'     => $type,
+				];
+			}
+			return $result;
+		}
+
+		// Morfema senza punti: restituisci sempre come radiko
+		// (es. 'ek', 'mal' da soli — il contesto prefissale non si applica)
+		if ($last === 0) {
+			$result[] = [
+				'morpheme' => $parts[0],
+				'pos'      => pos_label($e->part_of_speech),
+				'type'     => 'radiko',
+			];
+			return $result;
+		}
 
 		// Tutte le parti tranne l'ultima → radice con POS corretto
 		for ($i = 0; $i < $last; $i++) {
@@ -359,16 +401,6 @@
 		if ($data === null) return null;
 	 
 		$result = [];
-	 
-		// type helper based on Synthesis constant
-		$syn_type = function(int $syn, int $pos): string {
-			switch ($syn) {
-				case Synthesis::Prefix:     return $pos === POS::Preposition ? 'preposicio' : 'prefikso';
-				case Synthesis::Suffix:     return 'sufikso';
-				case Synthesis::Participle: return 'participo';
-				default:                    return 'radiko';
-			}
-		};
 
 		if ($data['without_ending']) {
 			$e = $data['simple_entry'];
@@ -380,24 +412,44 @@
 		}
 
 		if ($data['simple_entry'] !== null) {
-			// Parola semplice (es: am.ind.um.o -> am.ind.um)
 			$e = $data['simple_entry'];
 			_add_analyzed_morphemes($result, $e->morpheme, $e->part_of_speech, 'radiko');
 		} else {
-			// Parola composta: scorre la MorphemeList
 			$ml = $data['morpheme_list'];
+
+			$has_root = false;
+			for ($i = 0; $i <= $ml->get_last_index(); $i++) {
+				$e = $ml->get($i);
+				if ($e && ($e->synthesis === Synthesis::UnLimited || $e->synthesis === Synthesis::Limited)) {
+					$has_root = true;
+					break;
+				}
+			}
+
+			$syn_type = function(int $syn, int $pos) use ($has_root): string {
+				switch ($syn) {
+					case Synthesis::Prefix:
+						if (!$has_root) return 'radiko';
+						if ($pos === POS::Preposition) return 'preposicio';
+						if ($pos === POS::Prefix) return 'prefikso';
+						return 'radiko';
+					case Synthesis::Suffix:     return 'sufikso';
+					case Synthesis::Participle: return 'participo';
+					default:                    return 'radiko';
+				}
+			};
+
 			for ($i = 0; $i <= $ml->get_last_index(); $i++) {
 				$e = $ml->get($i);
 				if ($e === null) continue;
 				if ($e->flag === 'separator') {
 					$result[] = ['morpheme' => $e->morpheme, 'pos' => pos_label($e->part_of_speech), 'type' => 'disigilo'];
 				} else {
-					// Analizziamo il morfema della lista (nel caso contenesse punti)
 					_add_analyzed_morphemes($result, $e->morpheme, $e->part_of_speech, $syn_type($e->synthesis, $e->part_of_speech));
 				}
 			}
 		}
-		
+			
 		// Grammatical ending
 		$ending = $data['ending'];
 		$finajxo = $ending->ending;
@@ -412,7 +464,7 @@
 			$finajxo = mb_substr($finajxo, 0, -1);
 		}
 		$result[] = ['morpheme' => $finajxo, 'pos' => pos_label($ending->part_of_speech), 'type' => 'finaĵo'];
-		if ($havasPluralon) $result[] = ['morpheme' => 'j', 'pos' => 'plurala', 'type' => 'plurala'];
+		if ($havasPluralon) $result[] = ['morpheme' => 'j', 'pos' => 'plurala', 'type' => 'pluralo'];
 		if ($havasAkuzativon) $result[] = ['morpheme' => 'n', 'pos' => 'akuzativa', 'type' => 'akuzativo'];
 	 
 		return $result;
@@ -653,9 +705,23 @@
 		Ending       $ending,
 		bool         $dubious = false
 	): array {
-		$syn_type = function(int $syn, int $pos): string {
+		// Controlla se c'è almeno una radice nella parola
+		$has_root = false;
+		for ($i = 0; $i <= $ml->get_last_index(); $i++) {
+			$e = $ml->get($i);
+			if ($e && ($e->synthesis === Synthesis::UnLimited || $e->synthesis === Synthesis::Limited)) {
+				$has_root = true;
+				break;
+			}
+		}
+
+		$syn_type = function(int $syn, int $pos) use ($has_root): string {
 			switch ($syn) {
-				case Synthesis::Prefix:     return $pos === POS::Preposition ? 'preposicio' : 'prefikso';
+				case Synthesis::Prefix:
+					if (!$has_root) return 'radiko';
+					if ($pos === POS::Preposition) return 'preposicio';
+					if ($pos === POS::Prefix) return 'prefikso';
+					return 'radiko';
 				case Synthesis::Suffix:     return 'sufikso';
 				case Synthesis::Participle: return 'participo';
 				default:                    return 'radiko';
