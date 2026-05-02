@@ -2,15 +2,12 @@
 	require_once 'literumilo/literumilo.php';
 
 	$testo_da_analizzare = $_POST['teksto'] ?? "";
-	$versio = "2.6";
-	$limite = $_GET['limo'] ?? '';
+	$versio = "2.7";
 	
 	/**
 	 * Trasforma la struttura dati (array/json) in output HTML.
-	 * PHP puro, senza JavaScript.
 	 */
 	function render_html(array $data): string {
-		global $limite;
 		if (empty($data)) return "";
 
 		$output = '';
@@ -26,7 +23,7 @@
 				$output .= '<p class="descrizione">' . htmlspecialchars($item['word']) . ' <span class="fail-badge">Ne-analizita</span></p>';
 				$output .= '</div>';
 				continue;
-			} elseif ($limite != 'neanalizitaj') {
+			} else {
 				// Parola valida: creiamo il contenitore per le soluzioni
 				$output .= '<div class="risultato">';
 				$output .= '<p class="descrizione">' . htmlspecialchars($item['word']) . '</p>';
@@ -90,27 +87,58 @@
 				--radius:      10px;
 				--shadow:      0 2px 12px rgba(30,80,45,0.09);
 			}
-			* { box-sizing: border-box; margin: 0; padding: 0; }
+			* { 
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
 			body {
-				font-family: 'Source Sans 3', sans-serif;
+				font-family: 'Roboto', 'Open Sans', sans-serif;
 				background: var(--bg);
 				color: var(--text);
 				min-height: 100vh;
 				padding: 0 0 60px;
+			}
+			a { 
+				color: var(--green-mid);
+				text-decoration: none;
+				font-weight: bold;
+			}
+			a:hover { 
+				color: var(--green-dark);
+				text-decoration: underline;
 			}
 
 			/* ── HEADER ── */
 			header {
 				background: var(--green-dark);
 				color: white;
-				padding: 18px 24px 16px;
+				padding: 0 24px;
+				box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+			}
+			header .header-inner {
+				max-width: 780px;
+				margin: 0 auto;
+				padding: 18px 0 16px;
 				display: flex;
 				align-items: center;
 				gap: 14px;
-				box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+			}
+			header a.header-home {
+				display: flex;
+				align-items: center;
+				gap: 14px;
+				text-decoration: none;
+				color: inherit;
+			}
+			header a.header-home:hover .logo-mark { background: var(--green-mid); }
+			header a.header-home:hover .page-title { 
+				text-decoration: underline;
+				text-underline-offset: 3px;
 			}
 			header .logo-mark {
-				width: 38px; height: 38px;
+				width: 38px;
+				height: 38px;
 				background: var(--green-light);
 				border-radius: 8px;
 				display: flex;
@@ -122,6 +150,7 @@
 				color: white;
 				letter-spacing: -1px;
 				flex-shrink: 0;
+				transition: background 0.18s;
 			}
 			header .site-name {
 				font-size: 13px;
@@ -130,7 +159,7 @@
 				letter-spacing: 0.04em;
 			}
 			header .page-title {
-				font-family: 'Playfair Display', serif;
+				font-family: 'Roboto', 'Open Sans', serif;
 				font-size: 22px;
 				color: white;
 				font-weight: 600;
@@ -142,7 +171,8 @@
 				border: 1px solid rgba(255,255,255,0.25);
 				border-radius: 20px;
 				padding: 3px 10px;
-				font-size: 12px; font-family: 'JetBrains Mono', monospace;
+				font-size: 12px;
+				font-family: 'JetBrains Mono', monospace;
 				color: rgba(255,255,255,0.85);
 				flex-shrink: 0;
 			}
@@ -174,7 +204,7 @@
 				border: 1.5px solid var(--border);
 				border-radius: 8px;
 				padding: 12px 14px;
-				font-family: 'Source Sans 3', sans-serif;
+				font-family: 'Roboto', 'Open Sans', sans-serif;
 				font-size: 15px;
 				color: var(--text);
 				resize: none;
@@ -196,7 +226,7 @@
 				border: none;
 				border-radius: 8px;
 				padding: 0 22px;
-				font-family: 'Source Sans 3', sans-serif;
+				font-family: 'Roboto', 'Open Sans', sans-serif;
 				font-size: 15px;
 				font-weight: 600;
 				cursor: pointer;
@@ -216,18 +246,17 @@
 				margin-top: 14px;
 				padding: 10px 14px;
 				background: #eef4fb;
-				border-left: 3px solid #4a7fa0;
-				border-radius: 0 6px 6px 0;
-				font-size: 13px;
+				border-radius: var(--radius);
+				font-size: 12px;
 				color: var(--text-mid);
-				line-height: 1.55;
+				line-height: 1.45;
 				display: flex;
 				gap: 10px;
 				align-items: flex-start;
 			}
 			.nota svg { 
 				flex-shrink: 0;
-				margin-top: 1px; 
+				margin-top: 1px;
 			}
 
 			/* ── STATS BAR ── */
@@ -257,7 +286,7 @@
 				width: 8px;
 				height: 8px;
 				border-radius: 50%;
-				flex-shrink: 0; 
+				flex-shrink: 0;
 			}
 			.stat-chip b {
 				font-family: 'JetBrains Mono', monospace;
@@ -271,13 +300,12 @@
 
 			/* ── SECTION TITLE ── */
 			.esempio-titolo {
-				font-family: 'Playfair Display', serif;
-				font-size: 18px;
+				font-family: 'Roboto', 'Open Sans', serif;
+				font-size: 22px;
 				font-weight: 600;
 				color: var(--text);
-				margin-bottom: 14px;
 				padding-bottom: 8px;
-				border-bottom: 2px solid var(--border);
+				margin-bottom: .5em;
 				display: flex;
 				align-items: center;
 				gap: 8px;
@@ -289,7 +317,8 @@
 				border: 1.5px solid var(--border);
 				border-left: 4px solid var(--green-mid);
 				border-radius: var(--radius);
-				padding: 16px 18px; margin-bottom: 12px;
+				padding: 16px 18px;
+				margin-bottom: 12px;
 				box-shadow: var(--shadow);
 			}
 			.risultato.invalido {
@@ -301,7 +330,7 @@
 			.descrizione {
 				font-family: 'JetBrains Mono', monospace;
 				font-size: 16px;
-				font-weight: 500;
+				font-weight: 700;
 				color: black;
 				margin-bottom: 12px;
 				letter-spacing: 0.01em;
@@ -310,7 +339,7 @@
 				gap: 8px;
 			}
 			.fail-badge {
-				font-family: 'Source Sans 3', sans-serif;
+				font-family: 'Roboto', 'Open Sans', sans-serif;
 				font-size: 11px;
 				font-weight: 600;
 				text-transform: uppercase;
@@ -325,7 +354,7 @@
 			.scomposizione { 
 				display: flex;
 				flex-wrap: wrap;
-				gap: 8px; 
+				gap: 8px;
 			}
 			.scomposizione:not(:last-child) { margin-bottom: 10px; }
 
@@ -362,7 +391,7 @@
 			.etikedo {
 				display: block;
 				margin-top: 6px;
-				font-family: 'Source Sans 3', sans-serif;
+				font-family: 'Roboto', 'Open Sans', sans-serif;
 				font-size: 11.5px;
 				font-weight: 600;
 				text-transform: capitalize;
@@ -382,27 +411,120 @@
 			/* ── LINK BACK ── */
 			.back-link { 
 				margin-top: 16px;
-				font-size: 14px; 
+				font-size: 14px;
 			}
 			.back-link a { 
 				color: var(--green-mid);
-				text-decoration: none; 
+				text-decoration: none;
 			}
 			.back-link a:hover { text-decoration: underline; }
+			/* ── RADIO FILTER ── */
+			.filter-radio { display: none; }
+
+			/* Chip cliccabile */
+			label.stat-chip {
+				cursor: pointer;
+				transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+				user-select: none;
+			}
+			label.stat-chip:hover { 
+				border-color: var(--text-light);
+				background: var(--green-pale);
+			}
+
+			/* Stato attivo: chip selezionato — sfumatura colorata per ciascun tipo */
+			#f-tutti:checked        ~ .resumo label[for="f-tutti"] {
+				background: #333;
+				border-color: #333;
+				color: white;
+				box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+			}
+			#f-analizitaj:checked   ~ .resumo label[for="f-analizitaj"] {
+				background: var(--green-mid);
+				border-color: var(--green-mid);
+				color: white;
+				box-shadow: 0 2px 8px rgba(45,138,69,0.35);
+			}
+			#f-neanalizitaj:checked ~ .resumo label[for="f-neanalizitaj"] {
+				background: var(--salmon);
+				border-color: var(--salmon);
+				color: white;
+				box-shadow: 0 2px 8px rgba(232,112,96,0.35);
+			}
+			/* pallino e numero bianchi quando chip attivo */
+			#f-tutti:checked        ~ .resumo label[for="f-tutti"] .dot,
+			#f-analizitaj:checked   ~ .resumo label[for="f-analizitaj"] .dot,
+			#f-neanalizitaj:checked ~ .resumo label[for="f-neanalizitaj"] .dot {
+				background: rgba(255,255,255,0.7) !important;
+			}
+			#f-tutti:checked        ~ .resumo label[for="f-tutti"] b,
+			#f-analizitaj:checked   ~ .resumo label[for="f-analizitaj"] b,
+			#f-neanalizitaj:checked ~ .resumo label[for="f-neanalizitaj"] b { color: white; }
+
+			/* Filtro contenuto — logica corretta:
+			   f-analizitaj  = mostra solo validi  → nasconde .invalido
+			   f-neanalizitaj = mostra solo invalidi → nasconde i validi (non .invalido) */
+			#f-analizitaj:checked   ~ .content .risultato.invalido     { display: none; }
+			#f-neanalizitaj:checked ~ .content .risultato:not(.invalido) { display: none; }
+
+			/* Nascondiamo sempre la checkbox */
+			.toggle-checkbox {
+				display: none;
+			}
+
+			/* Di default (desktop), nascondiamo il label perché il testo è tutto visibile */
+			.read-more {
+				display: none;
+			}
+
+			@media (max-width: 720px) {
+				/* Nascondiamo il testo extra inizialmente */
+				.text-extra {
+					display: none;
+				}
+
+				/* Mostriamo il "mostra tutto" come se fosse un link */
+				.read-more {
+					display: inline;
+					color: #4a7fa0;
+					text-decoration: underline;
+					cursor: pointer;
+					font-weight: bold;
+					margin-left: 5px;
+				}
+
+				/* LOGICA: Quando la checkbox è selezionata... */
+				.toggle-checkbox:checked ~ span .text-extra {
+					display: inline; /* ...mostra il testo */
+				}
+
+				.toggle-checkbox:checked ~ span .read-more {
+					display: none; /* ...e nascondi il pulsante */
+				}
+			}
 		</style>
 	</head>
 
 	<body>
 		<header>
-			<div class="logo-mark">hV</div>
-			<div>
-				<div class="site-name">hVortaro</div>
-				<div class="page-title">Vortanalizilo</div>
+			<div class="header-inner">
+				<a class="header-home" href="vortanalizilo.php" title="Reen al la ekzemploj">
+					<div class="logo-mark">hV</div>
+					<div>
+						<div class="site-name">hVortaro</div>
+						<div class="page-title">Vortanalizilo</div>
+					</div>
+				</a>
+				<div class="version-badge">v<?= $versio ?></div>
 			</div>
-			<div class="version-badge">v<?= $versio ?></div>
 		</header>
 
 		<div class="container">
+
+			<!-- Radio filter: fratelli di .resumo e .content -->
+			<input type="radio" class="filter-radio" name="filtro" id="f-tutti" checked>
+			<input type="radio" class="filter-radio" name="filtro" id="f-analizitaj">
+			<input type="radio" class="filter-radio" name="filtro" id="f-neanalizitaj">
 
 			<div class="input-panel">
 				<form method="POST" action="" class="search-box">
@@ -411,18 +533,27 @@
 				</form>
 
 				<?php if (empty($_POST['teksto'])): ?>
-				<div class="nota">
-					<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<circle cx="10" cy="10" r="10" fill="#4a7fa0"/>
-						<text x="10" y="15" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="white">i</text>
-					</svg>
-					<span>Ĉi vortanalizilo estas provo krei ilon por rekoni la diversajn partojn de vortoj en Esperanto; ĝi uzas parton de la "<a href="https://github.com/Indrikoterio/literumilo-python" target="_blank">literumilo</a>" kreita de Klivo Lendon, sed daŭre ne estas 100% preciza, do ĉiam kontrolu ĝiajn respondojn se ili ne konvinkas vin. Korajn dankojn al Andrea Vaccari, Carlo Minnaja kaj Norberto Saletti pro iliaj konsiloj kaj sugestoj.</span>
-				</div>
+					<div class="nota">
+						<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="10" cy="10" r="10" fill="#4a7fa0"/>
+							<text x="10" y="15" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="bold" fill="white">i</text>
+						</svg>
+						
+						<!-- La checkbox "motore" del sistema -->
+						<input type="checkbox" id="toggle-text" class="toggle-checkbox">
+						
+						<span>
+							Ĉi tiu vortanalizilo estas provo krei ilon por rekoni la diversajn partojn de vortoj en Esperanto; ĝi uzas parton de la "<a href="https://github.com/Indrikoterio/literumilo-python" target="_blank">literumilo</a>" kreita de Klivo Lendon,
+							<!-- Parte da nascondere -->
+							<span class="text-extra">sed ĝi ankoraŭ ne estas 100% preciza, do ĉiam kontrolu ĝiajn respondojn se ili ne konvinkas vin. Korajn dankojn al Andrea Vaccari, Carlo Minnaja kaj Norberto Saletti pro iliaj konsiloj kaj sugestoj.</span>
+							<!-- Il finto "link" -->
+							<label for="toggle-text" class="read-more">mostra tutto</label>
+						</span>
+					</div>
 				<?php endif; ?>
 			</div>
 
-			<div class="content">
-				<?php
+			<?php
 					if (empty($testo_da_analizzare)) {
 						$isEsempio = true;
 						$testo_da_analizzare = 'ek fidi Bonvolu malplej belegaj ĉiulandanojn ŝian malreskribita ĉirkaŭdiri ĉimomente kongresaliĝilo krokodilo paperaro';
@@ -457,22 +588,24 @@
 						else $ne_analizitaj++;
 					}
 
-					// Stats bar con chip
+					// Stats bar con chip (label per radio filter) — FUORI da .content
 					echo '<div class="resumo">';
-					echo '<div class="stat-chip"><span class="dot dot-total"></span>Vortoj: <b>' . $vortoj . '</b></div>';
-					echo '<div class="stat-chip"><span class="dot dot-ok"></span>Analizitaj: <b>' . $analizitaj . '</b></div>';
-					echo '<div class="stat-chip"><span class="dot dot-fail"></span>Ne-analizitaj: <b>' . $ne_analizitaj . '</b></div>';
+					echo '<label for="f-tutti"        class="stat-chip" title="Montri ĉiujn vortojn"><span class="dot dot-total"></span>Vortoj: <b>' . $vortoj . '</b></label>';
+					echo '<label for="f-analizitaj"   class="stat-chip" title="Montri nur analizitajn vortojn"><span class="dot dot-ok"></span>Analizitaj: <b>' . $analizitaj . '</b></label>';
+					echo '<label for="f-neanalizitaj" class="stat-chip" title="Montri nur ne-analizitajn vortojn"><span class="dot dot-fail"></span>Ne-analizitaj: <b>' . $ne_analizitaj . '</b></label>';
 					echo '</div>';
+					echo '<div class="content">'; // apre .content
 
-					if ($isEsempio && ($limite != 'neanalizitaj' || $ne_analizitaj > 0))
+					if ($isEsempio)
 						echo '<div class="esempio-titolo">Ekzemploj</div>';
 					
 					// 3. Renderizziamo l'HTML (frontend logic in PHP)
 					echo render_html($analisi_array);
 
-					if (!$isEsempio) echo '<p class="back-link"><a href="">← Montri ekzemplojn</a></p>';
+					if (!$isEsempio) echo '<p class="back-link"><a href="vortanalizilo.php">← Montri ekzemplojn</a></p>';
+
+					echo '</div>'; // chiude .content
 				?>
-			</div>
-		</div>
+			</div> <!-- chiude .container -->
 	</body>
 </html>
